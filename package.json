@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node lis_server.js",
     "dev": "nodemon lis_server.js",
-    "test": "node test_simulator.js"
+    "test": "node test_batch_simulator.js"
   },
   "dependencies": {
     "express": "^4.18.2",
