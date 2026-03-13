@@ -25,7 +25,7 @@ module.exports = {
 
   // TCP Server
   tcp: {
-    port: process.env.TCP_PORT || 5001,
+    port: process.env.TCP_PORT || 8017,
     host: process.env.TCP_HOST || '0.0.0.0'
   },
 
