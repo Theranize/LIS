@@ -1,109 +1,76 @@
 /**
- * ASTM E1394 Parser
- * Converts raw ASTM messages into structured result objects
+ * ASTM Parser (lightweight)
+ * Output style matches your previous parser:
+ * {
+ *   analyzer: string|null,
+ *   messageId: string|null,
+ *   sampleId: string|null,
+ *   tests: [{ testCode, value, unit, referenceRange, flag }]
+ * }
+ *
+ * Adjusted to correctly parse your sample messages:
+ * - H record contains analyzer name at parts[4] (e.g., "Mindray BS-230")
+ * - P record contains patient/message id at parts[3] (e.g., "STREAM001")
+ * - O record contains sample id at parts[2] (e.g., "SAMPLE005")
+ * - R record contains test code in parts[2] like "^^^HDL" -> HDL
  */
 
-class ASTMParser {
-  parse(rawMessage, analyzerId) {
-    try {
-      console.log(`[Parser] 🔍 Parsing ASTM message (${rawMessage.length} chars)`);
-      
-      const lines = rawMessage.split('\r');
-      const results = [];
+export function astmParser(rawData, options = {}) {
+  const {
+    analyzer = null,    // if you already know analyzer from connection/profile
+    analyzerId = null   // optional, not used in output unless analyzer missing
+  } = options;
 
-      let currentMessage = {
-        analyzer_id: analyzerId,
-        patient_id: null,
-        analyzer_sample_id: null,
-        test_code: null,
-        test_name: null,
-        result_value: null,
-        unit: null,
-        reference_range: null,
-        normal_flag: 'N',
-        result_timestamp: new Date()
-      };
+  const message = rawData;
 
-      console.log(`[Parser] 📋 Processing ${lines.length} ASTM lines`);
+  // Normalize line endings (your sample ends with \n after L)
+  const lines = message.replace(/\n/g, "").split("\r");
 
-      for (const [lineIndex, line] of lines.entries()) {
-        if (!line || line.length < 2) continue;
+  const result = {
+    analyzer: analyzer,
+    messageId: null,
+    sampleId: null,
+    tests: []
+  };
 
-        const type = line.charAt(0);
-        const parts = line.split('|');
+  for (const line of lines) {
+    if (!line || line.length < 2) continue;
 
-        // Debug log for key record types
-        if (['H', 'P', 'O', 'R', 'L'].includes(type)) {
-          console.log(`[Parser] Line ${lineIndex + 1}: ${type} record → ${parts.length} fields`);
-        }
+    const type = line.charAt(0); // H, P, O, R, L
+    const parts = line.split("|");
 
-        // Parse based on record type
-        if (type === 'P') {
-          // Patient record: P|seq||patient_id||name
-          currentMessage.patient_id = parts[3] || null;
-          console.log(`[Parser] 👤 Patient ID: ${currentMessage.patient_id}`);
-        } 
-        else if (type === 'O') {
-          // Order record: O|seq|specimen_id||test_code^test_name
-          currentMessage.analyzer_sample_id = parts[2] || null;
-          const testField = parts[4] || '';
-          const testParts = testField.split('^');
-          currentMessage.test_code = testParts[0] || null;
-          currentMessage.test_name = testParts[1] || null;
-          console.log(`[Parser] 🧪 Sample: ${currentMessage.analyzer_sample_id}, Test: ${currentMessage.test_code}`);
-        } 
-        else if (type === 'R') {
-          // Result record: R|seq|test_id|value|unit|reference|flag
-          const testField = parts[2] || '';
-          const testParts = testField.split('^');
-          currentMessage.test_code = testParts[testParts.length - 1] || currentMessage.test_code;
-          
-          currentMessage.result_value = parts[3] || null;
-          currentMessage.unit = parts[4] || null;
-          currentMessage.reference_range = parts[5] || null;
-          currentMessage.normal_flag = parts[6] || 'N';
-          
-          console.log(`[Parser] 📊 Result: ${currentMessage.test_code} = ${currentMessage.result_value} ${currentMessage.unit}`);
-          
-          // Clone and save result (CRITICAL for batch processing)
-          if (currentMessage.result_value && currentMessage.test_code) {
-            const resultCopy = { ...currentMessage };
-            results.push(resultCopy);
-            console.log(`[Parser] ✅ Added result ${results.length}: ${resultCopy.test_code}`);
-          }
-        }
-      }
+    if (type === "H") {
+      // Example: H|\\^&|||Mindray BS-230|||||P|1
+      // analyzer is at index 4 in your message
+      if (!result.analyzer) result.analyzer = parts[4] || null;
+      if (!result.analyzer && analyzerId != null) result.analyzer = String(analyzerId);
+    }
 
-      console.log(`[Parser] 🎯 PARSING COMPLETE: Found ${results.length} valid results`);
-      return results;
-    } catch (error) {
-      console.error('[Parser] ❌ ERROR parsing ASTM message:', error.message);
-      console.error('[Parser] Raw message:', JSON.stringify(rawMessage.substring(0, 200)));
-      return [];
+    if (type === "P") {
+      // Example: P|1||STREAM001||GARCIA^CARLOS
+      // Using STREAM001 as messageId/correlation id
+      if (!result.messageId) result.messageId = parts[3] || null;
+    }
+
+    if (type === "O") {
+      // Example: O|1|SAMPLE005||HDL^HDL Cholesterol
+      result.sampleId = parts[2] || result.sampleId || null;
+    }
+
+    if (type === "R") {
+      // Example: R|1|^^^HDL|55|mg/dL|>40|N||F
+      const rawTestField = parts[2] || "";
+      const testParts = rawTestField.split("^").filter(Boolean);
+      const testCode = (testParts.length ? testParts[testParts.length - 1] : rawTestField) || null;
+
+      const value = parts[3] || null;
+      const unit = parts[4] || null;
+      const referenceRange = parts[5] || null;
+      const flag = parts[6] || null;
+
+      result.tests.push({ testCode, value, unit, referenceRange, flag });
     }
   }
 
-  parseTimestamp(timeStr) {
-    if (!timeStr) return new Date();
-    
-    try {
-      // Format: YYYYMMDDHHMMSS
-      if (timeStr.length === 14) {
-        const year = parseInt(timeStr.substring(0, 4));
-        const month = parseInt(timeStr.substring(4, 6)) - 1;
-        const day = parseInt(timeStr.substring(6, 8));
-        const hour = parseInt(timeStr.substring(8, 10));
-        const minute = parseInt(timeStr.substring(10, 12));
-        const second = parseInt(timeStr.substring(12, 14));
-        
-        return new Date(year, month, day, hour, minute, second);
-      }
-    } catch (e) {
-      console.warn('[Parser] Could not parse timestamp:', timeStr);
-    }
-    
-    return new Date();
-  }
+  return result;
 }
-
-module.exports = new ASTMParser();
