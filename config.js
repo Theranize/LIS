@@ -25,14 +25,14 @@ module.exports = {
 
   // TCP Server
   tcp: {
-    port: process.env.TCP_PORT || 5001,
-    host: process.env.TCP_HOST || '0.0.0.0'
+    port: process.env.TCP_PORT || 8017,
+    host: process.env.TCP_HOST || '127.0.0.1'
   },
 
   // Express API Server
   api: {
-    port: process.env.API_PORT || 3000,
-    host: process.env.API_HOST || '0.0.0.0'
+    port: process.env.API_PORT || 8018,
+    host: process.env.API_HOST || '127.0.0.1'
   },
 
   // Default values
