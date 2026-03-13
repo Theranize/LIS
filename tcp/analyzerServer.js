@@ -84,7 +84,7 @@ export function startAnalyzerServer(port = 5000) {
 
   });
 
-  server.listen(port, () => {
+  server.listen(port, "0.0.0.0", () => {
     console.log(`HL7 TCP Server running on port ${port}`);
   });
 
