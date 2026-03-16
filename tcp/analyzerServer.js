@@ -52,7 +52,8 @@ export function startAnalyzerServer(port = 5000) {
           await updateRequestLog({
             request_ulid: requestUlid,
             response_data: ack,
-            error_message: null
+            error_message: null,
+            analyzer_code: parsed.analyzer
           });
 
           console.log("ACK sent");

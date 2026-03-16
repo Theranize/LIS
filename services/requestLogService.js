@@ -20,13 +20,14 @@ export async function updateRequestLog(data) {
 
   const sql = `
     UPDATE analyzer_requests
-    SET response_data = ?, error_message = ?, updated_at = NOW()
+    SET response_data = ?, error_message = ?, analyzer_code = ?, updated_at = NOW()
     WHERE request_ulid = ?
   `;
 
   await db.execute(sql, [
     data.response_data,
     data.error_message,
+    data.analyzer_code,
     data.request_ulid
   ]);
 }
