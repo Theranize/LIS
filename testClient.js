@@ -17,7 +17,7 @@ const astmMessage =
 'R|1|^^^HDL|55|mg/dL|>40|N||F\r' +
 'L|1|N\n';
 
-client.connect(8017, "127.0.0.1", () => {
+client.connect(8017, "69.62.77.70", () => {
 
   console.log("Connected to HL7 server");
 
