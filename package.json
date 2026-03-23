@@ -1,0 +1,17 @@
+{
+  "name": "hl7-analyzer-server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test-client": "nodemon testClient.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "mysql2": "^3.19.1",
+    "ulid": "^3.0.2"
+  }
+}
