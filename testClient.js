@@ -1,38 +1,141 @@
 import net from "net";
 
+const HOST = "127.0.0.1";
+const PORT = 8017;
+
+const ENQ = "\x05";
+const ACK = "\x06";
+const EOT = "\x04";
+
+// 🔹 ASTM frames
+// const frames = [
+//   "\x021H|\\^&|||H500^305YODH05816^4.0.2.3|||||||P|LIS2-A2|20260323161205\r\x03D3\r\n",
+//   "\x022P|1||2526027213||^manshi r||^25^Y|F\r\x0360\r\n",
+//   "\x023O|1|2526027213||^^^DIF|R|20260323151903|||||X||||BLOOD|||||AP^WOMAN|||||F\r\x0330\r\n",
+//   "\x027R|1|^^^WBC^6690-2|8.39|1E03/mm3|4.00 - 11.00^REFERENCE_RANGE|N\r\x0343\r\n",
+//   "\x024L|1|N\r\x03AA\r\n"
+// ];
+
+const frames = [
+
+  "\x021H|\\^&|||H500^305YODH05816^4.0.2.3|||||||P|LIS2-A2|20260323161205\r\x03D3\r\n",
+
+  "\x022P|1||2526027213||^manshi r||^25^Y|F\r\x0360\r\n",
+
+  "\x023O|1|2526027213||^^^DIF|R|20260323151903|||||X||||BLOOD|||||AP^WOMAN|||||F\r\x0330\r\n",
+
+  "\x024C|1|I|CONDITIONS^^NO_CONTROL\\S^DIFF^WBC_ABN_MAT^NRBC\\S^WBC^WBC_ABN_MAT^INTERF_WBC\\SUSPECTED_PATHOLOGY^^MALARIA_PV|I\r\x0310\r\n",
+
+  "\x025M|1|REAGENT|CLEANER\\DILUENT\\LYSE|251208I17^20260314000000^20260614\\251017H17^20260211000000^20260811\\250520M11^20260306000000^20260501A\r\x03EB\r\n",
+
+  "\x026M|2|SETTING|RUO\\WBCDIFF|TRUE\\5\r\x03AC\r\n",
+
+  "\x027R|1|^^^WBC^6690-2|8.39|1E03/mm3|4.00 - 11.00^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0343\r\n",
+
+  "\x020R|2|^^^RBC^789-8|3.67|1E06/mm3|3.90 - 5.20^REFERENCE_RANGE|L||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x035C\r\n",
+
+  "\x021R|3|^^^HGB^718-7|11.9|g/dL|11.5 - 15.1^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x037C\r\n",
+
+  "\x022R|4|^^^HCT^4544-3|35.4|%|35.0 - 45.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x03F8\r\n",
+
+  "\x023R|5|^^^MCV^787-2|96.4|fL|75.0 - 97.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0300\r\n",
+
+  "\x024R|6|^^^MCH^785-6|32.4|pg|26.5 - 33.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x03B1\r\n",
+
+  "\x025R|7|^^^MCHC^786-4|33.6|g/dL|32.0 - 36.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0320\r\n",
+
+  "\x026R|8|^^^RDW-CV^788-0|18.3|%|12.0 - 18.0^REFERENCE_RANGE|H||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x030A\r\n",
+
+  "\x027R|9|^^^RDW-SD^21000-5|53.1|fL|37.0 - 56.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x03F0\r\n",
+
+  "\x020R|10|^^^PLT^777-3|291|1E03/mm3|150 - 450^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0358\r\n",
+
+  "\x021R|11|^^^PDW^51631-0|11.1|fL|11.0 - 20.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0376\r\n",
+
+  "\x022R|12|^^^PCT^51637-7|0.247|%|0.150 - 0.400^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0318\r\n",
+
+  "\x023R|13|^^^MPV^32623-1|8.5|fL|7.4 - 11.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x035C\r\n",
+
+  "\x024R|14|^^^P-LCC^96354-6|73|1E03/mm3|44 - 140^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0370\r\n",
+
+  "\x025R|15|^^^P-LCR^48386-7|24.9|%|18.0 - 50.0^REFERENCE_RANGE|N||F||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x03AF\r\n",
+
+  "\x026R|16|^^^LYM#^731-0|3.75|1E03/mm3|1.25 - 4.00^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x03D4\r\n",
+
+  "\x027R|17|^^^LYM%^736-9|44.7|%|15.0 - 45.0^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x039E\r\n",
+
+  "\x020R|18|^^^MON#^742-7|0.30|1E03/mm3|0.20 - 0.80^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0388\r\n",
+
+  "\x021R|19|^^^MON%^5905-5|3.6|%|4.0 - 13.0^REFERENCE_RANGE|L||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x03A8\r\n",
+
+  "\x022R|20|^^^NEU#^751-8|4.07|1E03/mm3|1.50 - 7.50^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x03BF\r\n",
+
+  "\x023R|21|^^^NEU%^770-8|48.3|%|40.0 - 75.0^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0390\r\n",
+
+  "\x024R|22|^^^EOS#^711-2|0.26|1E03/mm3|0.00 - 0.40^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0321\r\n",
+
+  "\x025R|23|^^^EOS%^713-8|3.2|%|0.5 - 7.0^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0380\r\n",
+
+  "\x026R|24|^^^BAS#^704-7|0.01|1E03/mm3|0.00 - 0.10^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0303\r\n",
+
+  "\x027R|25|^^^BAS%^706-2|0.2|%|0.0 - 2.0^REFERENCE_RANGE|N||W||LabManager^^LABMANAGER|20260323151903|20260323151903|305YODH05816\r\x0310\r\n",
+
+  "\x024L|1|N\r\x03AA\r\n"
+
+];
+
+
 const client = new net.Socket();
 
-const hl7Message =
-"\x0BMSH|^~\\&|BS230|LAB|LIS|HOSP|202603111200||ORU^R01|1234|P|2.3\r" +
-"PID|||123456||John Doe\r" +
-"OBR|1||SAMPLE100||GLU\r" +
-"OBX|1|NM|GLU||105|mg/dL|70-110|N\r" +
-"OBX|2|NM|UREA||30|mg/dL|10-50|N\r" +
-"\x1C\r";
+let step = 0;
+let frameIndex = 0;
 
-const astmMessage =
-'H|\\\\^&|||Mindray BS-230|||||P|1\r' +
-'P|1||STREAM001||GARCIA^CARLOS\r' +
-'O|1|SAMPLE005||HDL^HDL Cholesterol\r' +
-'R|1|^^^HDL|55|mg/dL|>40|N||F\r' +
-'L|1|N\n';
+client.connect(PORT, HOST, () => {
+  console.log("Connected to server");
 
-client.connect(8017, "69.62.77.70", () => {
-
-  console.log("Connected to HL7 server");
-
-  // client.write(hl7Message);
-  // client.write(astmMessage);
-  // client.write(astmMessage);
-  client.write(astmMessage);
-
+  // 🔹 Step 1: Send ENQ
+  console.log("Sending ENQ");
+  client.write(ENQ);
 });
 
+// 🔹 Handle server response (ACK आधारित flow)
 client.on("data", (data) => {
+  const response = data.toString();
 
-  console.log("ACK Received:");
-  console.log(data.toString());
+  console.log("Received from server:", JSON.stringify(response));
 
-  client.destroy();
+  // 🔹 Step 2: After ENQ → expect ACK → send first frame
+  if (step === 0 && response.includes(ACK)) {
+    step = 1;
+    sendNextFrame();
+    return;
+  }
 
+  // 🔹 Step 3: After each frame ACK → send next frame
+  if (step === 1 && response.includes(ACK)) {
+    sendNextFrame();
+    return;
+  }
+});
+
+// 🔹 Send frames one by one
+function sendNextFrame() {
+  if (frameIndex < frames.length) {
+    console.log(`Sending frame ${frameIndex + 1}`);
+    client.write(frames[frameIndex]);
+    frameIndex++;
+  } else {
+    // 🔹 Step 4: All frames sent → send EOT
+    console.log("Sending EOT");
+    client.write(EOT);
+    step = 2;
+  }
+}
+
+client.on("close", () => {
+  console.log("Connection closed");
+});
+
+client.on("error", (err) => {
+  console.error("Error:", err.message);
 });
